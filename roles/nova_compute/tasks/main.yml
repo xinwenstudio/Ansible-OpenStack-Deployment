@@ -1,0 +1,34 @@
+---
+# tasks file for roles/nova_compute
+- name: get controller node's first network interface IP
+  ansible.builtin.shell: |
+    ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+  register: management_ip 
+
+- name: install nova packages
+  ansible.builtin.dnf:
+    name: "{{ nova_packages }}"
+    state: latest
+
+- name: deploy nova.conf from template
+  ansible.builtin.template:
+    src: templates/nova.conf.j2
+    dest: "{{ nova_conf_path }}" 
+
+- name: configure my_ip's value
+  community.general.ini_file:
+    path: "{{ nova_conf_path }}"
+    section: DEFAULT
+    option: my_ip
+    value: "{{ management_ip.stdout}}"
+    backup: yes
+
+
+- name: enable and start nova-compute service
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - libvirtd
+    - openstack-nova-compute

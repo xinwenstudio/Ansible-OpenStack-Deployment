@@ -1,0 +1,24 @@
+---
+# vars file for roles/neutron_self_service_network_compute
+neutron_packages:
+  - openstack-neutron-linuxbridge
+  
+neutron_conf:
+  rabbitmq_hostname: controller
+  rabbitmq_password: liuziyi212
+
+  nova_hostname: controller
+  nova_openstack_service_password: liuziyi212
+
+  linuxbridge_conf_path: /etc/neutron/plugins/ml2/linuxbridge_agent.ini
+  neutron_conf_path: /etc/neutron/neutron.conf
+
+  nova_conf_path: /etc/nova/nova.conf 
+
+  neutron_hostname: controller
+  neutron_openstack_service_password: liuziyi212
+
+  keystone_hostname: controller
+
+bridge_conf:
+  bridge_interface_name: br-ex

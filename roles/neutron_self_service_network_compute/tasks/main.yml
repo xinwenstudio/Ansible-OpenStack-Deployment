@@ -1,0 +1,153 @@
+---
+# tasks file for roles/neutron_self_service_network_compute
+- name: install neutron packages
+  ansible.builtin.dnf:
+    name: "{{ neutron_packages }}"
+    state: latest
+
+- name: some ip_get method and pre configure 
+  block:    
+    - name: get controller node's first network interface IP
+      ansible.builtin.shell: |
+        ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+      register: management_ip
+
+    - name: get the list of available interface
+      ansible.builtin.shell: "ip -o link show | awk -F': ' '{print $2}'"
+      register: interface_list
+
+    - name: set facts for interfaces names
+      ansible.builtin.set_fact:
+        management_if: "{{ interface_list.stdout_lines[1] }}"
+        provider_if: "{{ interface_list.stdout_lines[2] }}"
+        overlay_if: "{{ interface_list.stdout_lines[3] }}"
+
+    - name: get overlay_if's ip
+      ansible.builtin.shell: "ip -4 addr show dev {{ overlay_if }} | grep inet | awk '{print $2}' | cut -d'/' -f1"
+      register: overlay_ip
+
+    - name: set fact of local_ip var
+      ansible.builtin.set_fact:
+        local_ip: "{{ overlay_ip.stdout }}"
+
+
+- name: enable br_netfilter loads on boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/br_netfilter.conf
+    content: "br_netfilter\n"
+    mode: '0644'
+
+- name: configure sysctl for bridge-nf
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-bridge-nf.conf
+    content: | 
+      net.bridge.bridge-nf-call-iptables = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+    mode: '0644'
+
+- name: reload sysctl
+  ansible.builtin.command: sysctl --system
+
+
+- name: deploy conf_file from templates
+  block:
+    - name: deploy /etc/neutron/neutron.conf from templates
+      ansible.builtin.template:
+        src: templates/neutron.conf.j2
+        dest: "{{ neutron_conf.neutron_conf_path }}"
+
+    - name: deploy /etc/neutron/plugins/ml2/linuxbridge-agent.ini
+      ansible.builtin.template:
+        src: templates/linuxbridge_agent.ini.j2
+        dest: "{{ neutron_conf.linuxbridge_conf_path }}"
+
+
+
+- name: some special changes to the configure file
+  block: 
+    - name: add configrue vars to the linuxbridge.ini-1
+      community.general.ini_file:
+        path: "{{ neutron_conf.linuxbridge_conf_path }}"
+        section: linux_bridge
+        option: physical_interface_mappings
+        value: "provider:{{ bridge_conf.bridge_interface_name }}"
+
+    - name: add configrue vars to the linuxbridge_agent.ini-2
+      community.general.ini_file:
+        path: "{{ neutron_conf.linuxbridge_conf_path }}"
+        section: vxlan
+        option: local_ip
+        value: "{{ local_ip }}"
+
+- name: add nova_neutron_configuration
+  block:
+    - name: add auth_url  in neutron 
+      community.general.ini_file:
+        path: "{{ neutron_conf.nova_conf_path }}"
+        section: neutron 
+        option: auth_url
+        value: "http://{{ neutron_conf.neutron_hostname }}:5000"
+
+    - name: add auth_type in neutron section
+      community.general.ini_file:
+        path: "{{ neutron_conf.nova_conf_path }}"
+        section: neutron
+        option: auth_type
+        value: password
+
+    - name: add project_domain_name in neutron section
+      community.general.ini_file:
+        path: "{{ neutron_conf.nova_conf_path }}"
+        section: neutron
+        option: project_domain_name
+        value: Default
+
+    - name: add user_domain_name in neutron section
+      community.general.ini_file:
+        path: "{{ neutron_conf.nova_conf_path }}"
+        section: neutron
+        option: user_domain_name
+        value: Default
+
+    - name: add region_name in neutron section
+      community.general.ini_file:
+        path: "{{ neutron_conf.nova_conf_path }}"
+        section: neutron
+        option: region_name
+        value: RegionOne
+
+    - name: add project_name in neutron section
+      community.general.ini_file:
+        path: "{{ neutron_conf.nova_conf_path }}"
+        section: neutron
+        option: project_name
+        value: service
+
+    - name: add username in neutron section
+      community.general.ini_file:
+        path: "{{ neutron_conf.nova_conf_path }}"
+        section: neutron
+        option: username
+        value: neutron
+
+    - name: add password in neutron section
+      community.general.ini_file:
+        path: "{{ neutron_conf.nova_conf_path }}"
+        section: neutron
+        option: password
+        value: "{{ neutron_conf.neutron_openstack_service_password }}"
+
+
+- name: restart openstack-nova-compute.service
+  ansible.builtin.service:
+    name: openstack-nova-compute.service
+    state: restarted
+    enabled: yes
+
+- name: start neutron-openstack-linuxbridge.service
+  ansible.builtin.service:
+    name: neutron-linuxbridge-agent
+    state: restarted
+    enabled: yes
+
+

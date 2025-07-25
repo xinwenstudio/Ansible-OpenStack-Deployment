@@ -1,0 +1,28 @@
+---
+# vars file for roles/nova_compute
+nova_packages:
+  - libvirt 
+  - libvirt-daemon-driver-qemu 
+  - libvirt-daemon-kvm 
+  - qemu-kvm 
+  - virt-install 
+  - virt-viewer 
+  - libguestfs-tools
+  - openstack-nova-compute
+
+
+nova_conf_path: /etc/nova/nova.conf
+
+nova_conf:
+  rabbitmq_hostname: controller
+  rabbitmq_password: liuziyi212
+  keystone_hostname: controller
+  keystone_password: liuziyi212
+  nova_hostname: compute
+  nova_openstack_service_password: liuziyi212
+  nova_controller_node: controller
+  glance_hostname: controller
+  glance_password: liuziyi212
+  placement_hostname: controller
+  placement_password: liuziyi212
+

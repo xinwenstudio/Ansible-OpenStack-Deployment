@@ -1,0 +1,60 @@
+[DEFAULT]
+auth_strategy = keystone
+notify_nova_on_port_status_changes = true
+notify_nova_on_port_data_changes = true
+
+core_plugin = ml2
+service_plugins = router
+
+transport_url = rabbit://openstack:{{ neutron_conf.rabbitmq_password }}@{{ neutron_conf.rabbitmq_hostname }}
+
+[agent]
+[cache]
+[cors]
+[database]
+connection = mysql+pymysql://neutron:{{ neutron_conf.neutron_db_password }}@{{ neutron_conf.mysql_hostname }}/neutron
+
+[designate]
+[experimental]
+linuxbridge = true
+[healthcheck]
+[ironic]
+[keystone_authtoken]
+www_authenticate_uri = http://{{ neutron_conf.keystone_hostname }}:5000
+auth_url = http://{{ neutron_conf.keystone_hostname }}:5000
+memcached_servers = {{ neutron_conf.keystone_hostname }}:11211
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = neutron
+password = {{ neutron_conf.neutron_openstack_service_password }}
+
+[nova]
+auth_url = http://{{ neutron_conf.nova_hostname }}:5000
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+region_name = RegionOne
+project_name = service
+username = nova
+password = {{ neutron_conf.nova_password }}
+
+[oslo_concurrency]
+lock_path = /var/lib/neutron/tmp
+
+[oslo_messaging_amqp]
+[oslo_messaging_kafka]
+[oslo_messaging_notifications]
+[oslo_messaging_rabbit]
+[oslo_middleware]
+[oslo_policy]
+[oslo_reports]
+[oslo_versionedobjects]
+[placement]
+[privsep]
+[profiler]
+[profiler_jaeger]
+[profiler_otlp]
+[quotas]
+[ssl]

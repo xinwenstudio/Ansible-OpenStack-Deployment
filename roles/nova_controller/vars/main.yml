@@ -1,0 +1,33 @@
+---
+# vars file for roles/nova_controller
+nova_packages:
+  - openstack-nova-api
+  - openstack-nova-conductor
+  - openstack-nova-novncproxy
+  - openstack-nova-scheduler
+
+
+nova_db_name:
+  nova_api: nova_api
+  nova: nova
+  nova_cell0: nova_cell0
+
+nova_db_user: nova
+nova_db_user_password: liuziyi212
+nova_openstack_service_password: liuziyi212
+nova_conf_path: /etc/nova/nova.conf
+mysql_root_password: "@Liuziyi212"
+
+nova_conf:
+  nova_db_user_password: liuziyi212
+  nova_hostname: controller
+  keystone_hostname: controller
+  rabbitmq_hostname: controller
+  rabbitmq_password: liuziyi212
+  nova_openstack_service_password: liuziyi212
+  placement_hostname: controller
+  placement_openstack_service_password: liuziyi212
+  mysql_hostname: controller
+  glance_hostname: controller
+  glance_openstack_service_password: liuziyi212
+  #whta about the my_ip is that the my_ip is actually management_interface's ip on the target hosts,so please use combine in ansible to insert the key my_ip under [default] 

@@ -1,0 +1,50 @@
+---
+# vars file for roles/neutron_self_service_network_controller
+neutron_packages:
+  - openstack-neutron
+  - openstack-neutron-ml2
+  - openstack-neutron-linuxbridge
+  - ebtables
+
+neutron_conf_path: /etc/neutron/neutron.conf
+mysql_root_password: "@Liuziyi212"
+neutron_openstack_service_password: liuziyi212
+
+neutron_db:
+  neutron_db_name: neutron
+  neutron_db_user_password: liuziyi212
+  neutron_db_user: neutron
+
+neutron_conf:
+  mysql_hostname: controller
+  neutron_hostname: controller
+  neutron_db_password: liuziyi212
+  
+  rabbitmq_hostname: controller
+  rabbitmq_password: liuziyi212
+
+  keystone_hostname: controller
+  neutron_openstack_service_password: liuziyi212
+
+  nova_hostname: controller
+  nova_password: liuziyi212
+  nova_conf_path: /etc/nova/nova.conf
+
+  METADATA_SECRET: liuziyi212
+  metadata_hostname: controller
+  
+  neutron_conf_path: /etc/neutron/neutron.conf
+  ml2_conf_path: /etc/neutron/plugins/ml2/ml2_conf.ini
+  openvswitch_conf_path: /etc/neutron/plugins/ml2/openvswitch_agent.ini
+  l3_conf_path: /etc/neutron/l3_agent.ini
+  dhcp_conf_path: /etc/neutron/dhcp_agent.ini
+  metadata_conf_path: /etc/neutron/metadata_agent.ini
+  linuxbridge_conf_path: /etc/neutron/plugins/ml2/linuxbridge_agent.ini
+
+bridge_conf:
+  bridge_name: br-ex
+  bridge_ip: 192.168.77.152
+  bridge_prefix: 24
+  bridge_gateway: 192.168.77.2
+  phys_interface: ens192
+  bridge_interface: br-ex

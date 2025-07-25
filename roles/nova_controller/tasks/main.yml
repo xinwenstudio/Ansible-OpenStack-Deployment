@@ -1,0 +1,204 @@
+---
+# tasks file for roles/nova_controller
+- name: get nova-controller's node's first network interface IP
+  ansible.builtin.shell: |
+    ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+  register: management_ip
+
+- name: create the nova db and db user 
+  block: 
+  - name: create nova db(nova-api)
+    community.mysql.mysql_db:
+      name: "{{ nova_db_name.nova_api }}"
+      state: present
+      login_user: root
+      login_password: "{{ mysql_root_password }}"
+      login_host:  "{{ management_ip.stdout }}"
+
+      
+  - name: create nova db(nova)
+    community.mysql.mysql_db:
+      name: "{{ nova_db_name.nova }}"
+      state: present
+      login_user: root
+      login_password: "{{ mysql_root_password }}"
+      login_host:  "{{ management_ip.stdout }}"
+
+  - name: create nova db(nova_cell0)
+    community.mysql.mysql_db:
+      name: "{{ nova_db_name.nova_cell0 }}"
+      state: present
+      login_user: root
+      login_password: "{{ mysql_root_password }}"
+      login_host:  "{{ management_ip.stdout }}"
+
+
+  - name: grant pri to nova@localhost for all dataabse(nova-api)
+    community.mysql.mysql_user:
+      name: "{{ nova_db_user }}"
+      password: "{{ nova_db_user_password }}"
+      host: localhost
+      priv: "{{ nova_db_name.nova_api }}.*:ALL"
+      state: present
+      login_user: root
+      login_host: "{{ management_ip.stdout }}"
+      login_password: "{{ mysql_root_password }}"
+
+      
+  - name: grant pri to nova@localhost for all dataabse(nova)
+    community.mysql.mysql_user:
+      name: "{{ nova_db_user }}"
+      password: "{{ nova_db_user_password }}"
+      host: localhost
+      priv: "{{ nova_db_name.nova }}.*:ALL"
+      state: present
+      login_user: root
+      login_host: "{{ management_ip.stdout }}"
+      login_password: "{{ mysql_root_password }}"
+      append_privs: yes
+
+  - name: grant pri to nova@localhost for all dataabse(nova_cell0)
+    community.mysql.mysql_user:
+      name: "{{ nova_db_user }}"
+      password: "{{ nova_db_user_password }}"
+      host: localhost
+      priv: "{{ nova_db_name.nova_cell0 }}.*:ALL"
+      state: present
+      login_user: root
+      login_host: "{{ management_ip.stdout }}"
+      login_password: "{{ mysql_root_password }}"
+      append_privs: yes
+
+  - name: grant pri to nova@% for all dataabse(nova_api)
+    community.mysql.mysql_user:
+      name: "{{ nova_db_user }}"
+      password: "{{ nova_db_user_password }}"
+      host: "%"
+      priv: "{{ nova_db_name.nova_api }}.*:ALL"
+      state: present
+      login_user: root
+      login_host: "{{ management_ip.stdout }}"
+      login_password: "{{ mysql_root_password }}"
+
+  - name: grant pri to nova@% for all dataabse(nova)
+    community.mysql.mysql_user:
+      name: "{{ nova_db_user }}"
+      password: "{{ nova_db_user_password }}"
+      host: "%"
+      priv: "{{ nova_db_name.nova }}.*:ALL"
+      state: present
+      login_user: root
+      login_host: "{{ management_ip.stdout }}"
+      login_password: "{{ mysql_root_password }}"
+      append_privs: yes
+
+  - name: grant pri to nova@% for all dataabse(nova_cell0)
+    community.mysql.mysql_user:
+      name: "{{ nova_db_user }}"
+      password: "{{ nova_db_user_password }}"
+      host: "%"
+      priv: "{{ nova_db_name.nova_cell0 }}.*:ALL"
+      state: present
+      login_user: root
+      login_host: "{{ management_ip.stdout }}"
+      login_password: "{{ mysql_root_password }}"
+      append_privs: yes
+
+- name: create openstack nova service user and assign admin role to nova 
+  block:
+    - name: create nova user
+      openstack.cloud.identity_user:
+        name: nova
+        domain: default
+        password: "{{ nova_openstack_service_password }}"
+        state: present
+
+    - name: assgin admin role to nova user
+      openstack.cloud.role_assignment:
+        user: nova
+        project: service
+        role: admin 
+        state: present
+
+    - name: create nova compute service 
+      openstack.cloud.catalog_service:
+        name: nova
+        description: "OpenStack Compute Service"
+        service_type: compute
+        state: present
+
+- name: create openstack nova service's api endpoint
+  block: 
+    - name: create nova's public endpoint
+      openstack.cloud.endpoint:
+        service: nova
+        endpoint_interface: public
+        url: "http://{{ management_ip.stdout }}:8774/v2.1"
+        region: RegionOne
+        state: present
+
+    - name: create nova's internal endpoint
+      openstack.cloud.endpoint:
+        service: nova
+        endpoint_interface: internal
+        url: "http://{{ management_ip.stdout }}:8774/v2.1"
+        region: RegionOne
+        state: present
+
+    - name: create nova's admin endpoint
+      openstack.cloud.endpoint:
+        service: nova
+        endpoint_interface: admin
+        url: "http://{{ management_ip.stdout }}:8774/v2.1"
+        region: RegionOne
+        state: present
+
+- name: install nova packages
+  ansible.builtin.dnf:
+    name: "{{ nova_packages }}"
+    state: latest
+
+- name: deploy nova.conf form tempalte
+  ansible.builtin.template:
+    src: templates/nova.conf.j2
+    dest: "{{ nova_conf_path }}"
+
+- name: configure my_ip's value
+  community.general.ini_file:
+    path: "{{ nova_conf_path }}"
+    section: DEFAULT
+    option: my_ip
+    value: "{{ management_ip.stdout}}"
+    backup: yes
+
+- name: insert nova_api_db
+  ansible.builtin.shell: |
+    su -s /bin/sh -c "nova-manage api_db sync" nova
+
+- name: insert nova_cell0
+  ansible.builtin.shell: |
+    su -s /bin/sh -c "nova-manage cell_v2 map_cell0" nova
+
+- name: insert nova_cell1
+  ansible.builtin.shell: |
+    su -s /bin/sh -c "nova-manage cell_v2 create_cell --name=cell1 --verbose" nova
+
+- name: insert nova db
+  ansible.builtin.shell: |
+    su -s /bin/sh -c "nova-manage db sync" nova
+
+- name: enable and start all nova services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - openstack-nova-api.service
+    - openstack-nova-scheduler.service
+    - openstack-nova-conductor.service
+    - openstack-nova-novncproxy.service
+
+
+
+
+
