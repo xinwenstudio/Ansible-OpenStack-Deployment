@@ -1,0 +1,10 @@
+---
+# vars file for roles/skyline_controller
+skyline_db_conf:
+  mysql_root_password: "@Liuziyi212"
+  mysql_hostname: controller
+  skyline_db_name: skyline
+  skyline_db_user: skyline
+  skyline_db_user_password: liuziyi212
+
+skyline_openstack_service_password: liuziyi212

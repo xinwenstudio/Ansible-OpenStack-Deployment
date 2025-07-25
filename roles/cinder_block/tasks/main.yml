@@ -1,0 +1,57 @@
+---
+# tasks file for roles/cinder_block
+- name: some ip_get method and pre configure 
+  block:    
+    - name: get controller node's first network interface IP
+      ansible.builtin.shell: |
+        ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+      register: management_ip
+
+- name: install cinder packages
+  ansible.builtin.dnf:
+    name: 
+      - openstack-cinder 
+      - targetcli
+    state: latest
+
+
+
+- name: create sdb
+  ansible.builtin.shell: |
+    pvcreate /dev/sdb
+
+- name: create cinder-volumes
+  ansible.builtin.shell: |
+    vgcreate cinder-volumes /dev/sdb
+
+
+
+
+
+- name: deploy cinder conf
+  ansible.builtin.template:
+    src: templates/cinder.conf.j2
+    dest: /etc/cinder/cinder.conf
+
+- name: deploy /etc/lvm/lvm.conf
+  ansible.builtin.template:
+    src: templates/lvm.conf.j2
+    dest: /etc/lvm/lvm.conf
+
+- name: add my_ip
+  community.general.ini_file:
+    path: /etc/cinder/cinder.conf
+    section: DEFAULT
+    option: my_ip
+    value: "{{ management_ip.stdout }}"
+
+- name: enable and start openstack-cinder-volume.service and target.service
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop: 
+    - openstack-cinder-volume.service 
+    - target.service
+
+

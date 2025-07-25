@@ -1,0 +1,56 @@
+---
+# tasks file for roles/skyline_controller
+- name: get nova-controller's node's first network interface IP
+  ansible.builtin.shell: |
+    ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+  register: management_ip
+
+- name: create skyline_db and db_user
+  block:
+    - name: create skyline_db
+      community.mysql.mysql_db:
+        name: "{{ skyline_db_conf.skyline_db_name }}"
+        login_user: root
+        login_password: "{{ skyline_db_conf.mysql_root_password }}"
+        login_host: "{{ management_ip.stdout }}"
+        state: present
+
+    - name: grant pri to skyline@localhost for all
+      community.mysql.mysql_user:
+        name: "{{ skyline_db_conf.skyline_db_user }}"
+        password: "{{ skyline_db_conf.skyline_db_user_password }}"
+        host: localhost
+        state: present
+        priv: "{{ skyline_db_conf.skyline_db_name }}.*:ALL"
+        login_user: root
+        login_host: "{{ management_ip.stdout }}"
+        login_password: "{{ skyline_db_conf.mysql_root_password }}"
+
+
+    - name: grant pri to skyline@% for all
+      community.mysql.mysql_user:
+        name: "{{ skyline_db_conf.skyline_db_user }}"
+        password: "{{ skyline_db_conf.skyline_db_user_password }}"
+        host: '%'
+        state: present
+        priv: "{{ skyline_db_conf.skyline_db_name }}.*:ALL"
+        login_user: root
+        login_host: "{{ management_ip.stdout }}"
+        login_password: "{{ skyline_db_conf.mysql_root_password }}"
+
+
+- name: create openstack skyline service user and assign admin role to skyline
+  block:
+    - name: create skyline user
+      openstack.cloud.identity_user:
+        name: skyline
+        domain: default
+        password: "{{ skyline_openstack_service_password }}"
+        state: present
+
+    - name: assgin admin role to skyline user
+      openstack.cloud.role_assignment:
+        user: skyline
+        project: service
+        role: admin
+        state: present

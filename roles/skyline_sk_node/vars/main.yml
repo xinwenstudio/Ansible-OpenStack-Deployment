@@ -1,0 +1,29 @@
+---
+# vars file for roles/skyline
+packages_need_to_uninstall:
+  - docker
+  - docker-common
+  - docker-selinux
+  - docker-engine
+
+packages_need_to_install:
+  - dnf-utils
+  - device-mapper-persistent-data
+  - lvm2
+
+skyline_image: "99cloud/skyline:latest"
+
+skyline_required_dirs:
+  - /etc/skyline
+  - /var/log/skyline
+  - /var/lib/skyline
+  - /var/log/nginx
+
+# Skyline 配置相关变量
+skyline_db_password: "liuziyi212"
+db_server: "controller"
+keystone_server: "controller"
+skyline_service_password: "liuziyi212"
+
+skyline_config_path: "/etc/skyline/skyline.yaml"
+

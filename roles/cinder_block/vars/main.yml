@@ -1,0 +1,17 @@
+---
+cinder_disk_device: /dev/sdb
+
+cinder_conf:
+  keystone_hostname: controller
+  
+  cinder_opentack_service_password: liuziyi212
+  rabbitmq_hostname: controller
+  rabbitmq_password: liuziyi212
+
+  mysql_root_password: liuziyi212
+  mysql_hostname: controller
+  cinder_db_user_password: liuziyi212
+
+  glance_hostname: controller
+
+  cinder_openstack_service_password: liuziyi212

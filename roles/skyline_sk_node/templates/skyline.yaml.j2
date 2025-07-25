@@ -1,0 +1,7 @@
+default:
+  database_url: "mysql://skyline:{{ skyline_db_password }}@{{ db_server }}:3306/skyline"
+  debug: true
+  log_dir: /var/log
+openstack:
+  keystone_url: "http://{{ keystone_server }}:5000/v3/"
+  system_user_password: "{{ skyline_service_password }}"

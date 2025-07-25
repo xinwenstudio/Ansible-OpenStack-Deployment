@@ -1,0 +1,14 @@
+---
+# tasks file for roles/cinder_compute
+- name: add cinder in nova_configure_file
+  community.general.ini_file:
+    path: /etc/nova/nova.conf
+    section: cinder
+    option: os_region_name
+    value: RegionOne
+
+- name: restart openstack-nova-api.service
+  ansible.builtin.service:
+    name: openstack-nova-compute.service
+    state: restarted
+    enabled: yes

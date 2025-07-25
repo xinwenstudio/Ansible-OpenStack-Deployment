@@ -1,0 +1,25 @@
+---
+# vars file for roles/cinder_controller
+cinder_packages:
+  - openstack-cinder
+
+
+cinder_db_conf:
+  cinder_db_name: cinder
+  cinder_db_user: cinder
+  cinder_db_user_password: liuziyi212
+
+
+cinder_conf:
+  cinder_openstack_service_password: liuziyi212
+  cinder_conf_path: /etc/cinder/cinder.conf
+  cinder_hostname: controller
+  cinder_api_endpoint_path: "/v3/%(project_id)s" 
+
+  rabbitmq_hostname: controller
+  rabbitmq_password: liuziyi212
+
+  keystone_hostname: controller
+
+  mysql_hostname: controller
+  mysql_root_password: "@Liuziyi212"

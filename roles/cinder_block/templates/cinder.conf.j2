@@ -1,0 +1,59 @@
+[DEFAULT]
+transport_url = rabbit://openstack:{{ cinder_conf.rabbitmq_password }}@{{ cinder_conf.rabbitmq_hostname }}
+enabled_backends = lvm
+auth_strategy = keystone
+glance_api_servers = http://{{ cinder_conf.glance_hostname }}:9292
+
+[backend]
+[backend_defaults]
+[barbican]
+[barbican_service_user]
+[brcd_fabric_example]
+[cisco_fabric_example]
+[coordination]
+[cors]
+
+[database]
+connection = mysql+pymysql://cinder:{{ cinder_conf.cinder_db_user_password }}@{{ cinder_conf.mysql_hostname }}/cinder
+
+
+[fc-zone-manager]
+[healthcheck]
+[key_manager]
+[keystone_authtoken]
+www_authenticate_uri = http://{{ cinder_conf.keystone_hostname }}:5000
+auth_url = http://{{ cinder_conf.keystone_hostname }}:5000
+memcached_servers = {{ cinder_conf.keystone_hostname }}:11211
+auth_type = password
+project_domain_name = default
+user_domain_name = default
+project_name = service
+username = cinder
+password = {{ cinder_conf.cinder_openstack_service_password }}
+
+[nova]
+[os_brick]
+[oslo_concurrency]
+lock_path = /var/lib/cinder/tmp
+[oslo_messaging_amqp]
+[oslo_messaging_kafka]
+[oslo_messaging_notifications]
+[oslo_messaging_rabbit]
+[oslo_middleware]
+[oslo_policy]
+[oslo_reports]
+[oslo_versionedobjects]
+[privsep]
+[profiler]
+[profiler_jaeger]
+[profiler_otlp]
+[sample_castellan_source]
+[sample_remote_file_source]
+[service_user]
+[ssl]
+[vault]
+[lvm]
+volume_driver = cinder.volume.drivers.lvm.LVMVolumeDriver
+volume_group = cinder-volumes
+target_protocol = iscsi
+target_helper = lioadm
