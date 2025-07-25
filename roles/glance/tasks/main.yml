@@ -1,0 +1,132 @@
+---
+# tasks file for roles/glance
+- name: get controller node's first network interface IP
+  ansible.builtin.shell: |
+    ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+  register: management_ip
+
+
+- name: install glance packages
+  ansible.builtin.dnf:
+    name: "{{ glance_packages }}"
+    state: latest
+
+- name: create and configrue glance_db
+  block:
+    - name: create glance db
+      community.mysql.mysql_db:
+        name: "{{ glance_db_name }}"
+        login_host: "{{ management_ip.stdout }}"
+          #login_host: 127.0.0.1
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: create keystone db_user_%
+      community.mysql.mysql_user:
+        login_host: "{{ management_ip.stdout }}"
+        # login_host: 127.0.0.1
+        name: "{{ glance_db_user }}"
+        password: "{{ glance_db_password_task_use }}"
+        priv: "{{ glance_db_name }}.*:ALL"
+        host: "%"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: create keystone db_user_localhost
+      community.mysql.mysql_user:
+        login_host: "{{ management_ip.stdout }}"
+        #login_host: 127.0.0.1
+        name: "{{ glance_db_user }}"
+        password: "{{ glance_db_password_task_use }}"
+        priv: "{{ glance_db_name }}.*:ALL"
+        host: localhost
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+    
+- name: create glance  service user
+  block:
+    - name: create glance user in default domain
+      openstack.cloud.identity_user:
+        name: glance
+        domain: default
+        password: "{{ glance_password_task_use }}"
+        state: present
+
+    - name: assign admin role to glance in service project
+      openstack.cloud.role_assignment:
+        user: glance
+        project: service
+        role: admin
+        state: present
+
+    - name: create image service(glance)
+      openstack.cloud.catalog_service:
+        name: glance
+        service_type: image
+        description: "OpenStack Image Service"
+        state: present
+
+- name: create endpoint(need public internal admin,all three needed)
+  block:
+    - name: create glance's public endpoint
+      openstack.cloud.endpoint:
+        service: glance
+        endpoint_interface: public
+        url: "http://{{ management_ip.stdout }}:9292"
+        region: RegionOne
+        state: present
+
+    - name: create glance's  internal endpoint 
+      openstack.cloud.endpoint:
+        service: glance
+        endpoint_interface: internal
+        url: "http://{{ management_ip.stdout }}:9292"
+        region: RegionOne
+        state: present
+
+    - name: create glance's admin endpoint
+      openstack.cloud.endpoint:
+        service: glance
+        endpoint_interface: admin
+        url: "http://{{ management_ip.stdout }}:9292"
+        region: RegionOne
+        state: present
+
+
+- name: get glance's endpoint_id and combine with vars that has written 
+  block: 
+    - name: get glance public endpoint id
+      ansible.builtin.shell: |
+        openstack endpoint list --service glance --region RegionOne -f json
+      register: glance_endpoint_json
+
+    - name: extract public endpoint id
+      ansible.builtin.set_fact:
+        glance_endpoint_id: >-
+          {{ (glance_endpoint_json.stdout | from_json)
+             | selectattr('Interface','equalto','public')
+             | map(attribute='ID') | first }}
+
+    - name: combine glance_ip_conf with endpoint_id
+      ansible.builtin.set_fact:
+        glance_api_conf_final: "{{ glance_api_conf | combine({'endpoint_id' : glance_endpoint_id}) }}"
+
+    - name: use j2 templates deploy glance-api.conf
+      ansible.builtin.template:
+        src: templates/glance-api.conf.j2
+        dest: "{{ glance_conf_path }}"
+      vars: 
+        glance_api_conf: "{{ glance_api_conf_final }}"
+
+- name: fill the glance_db
+  ansible.builtin.shell: |
+    su -s /bin/sh -c "glance-manage db_sync" glance
+
+- name: enable and start openstack-glance-api
+  ansible.builtin.service:
+    name: openstack-glance-api
+    state: started 
+    enabled: yes

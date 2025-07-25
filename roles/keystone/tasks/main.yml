@@ -1,0 +1,155 @@
+---
+# tasks file for roles/keystone
+- name: get controller node's first network interface IP(management_ip)
+  ansible.builtin.shell: |
+    ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+  register: management_nip_ip_add
+
+- name: create and configrue keystone db
+  block:
+    - name: create keystone db
+      community.mysql.mysql_db:
+        name: "{{ keystone_db_name }}"
+        login_host: "{{ management_nip_ip_add.stdout }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+    
+    - name: create keystone db_user
+      community.mysql.mysql_user:
+        login_host: "{{ management_nip_ip_add.stdout }}"
+        name: "{{ keystone_db_user }}"
+        password: "{{ keystone_db_password }}"
+        priv: "{{ keystone_db_name }}.*:ALL"
+        host: "%"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      
+
+
+    - name: create keystone db_user
+      community.mysql.mysql_user:
+        login_host: "{{ management_nip_ip_add.stdout }}"
+        name: "{{ keystone_db_user }}"
+        password: "{{ keystone_db_password }}"
+        priv: "{{ keystone_db_name }}.*:ALL"
+        host: localhost
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+
+
+- name: install keystone packages
+  ansible.builtin.dnf:
+    name: "{{ keystone_packages }}"
+    state: latest
+
+- name: configrue keystone.conf
+  ansible.builtin.template:
+    src: templates/keystone.conf.j2
+    dest: "{{ keystone_conf_path }}"
+
+- name: fill the keystone db
+  ansible.builtin.shell: |
+    su -s /bin/sh -c "keystone-manage db_sync" keystone
+
+- name: init Fernet-key db
+  ansible.builtin.shell: |
+    keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone 
+    keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
+
+- name: lead keystone service
+  ansible.builtin.shell: |
+    keystone-manage bootstrap --bootstrap-password "{{ keystone_admin_password }}" \
+    --bootstrap-admin-url "http://{{ management_ip }}:5000/v3/" \
+    --bootstrap-internal-url "http://{{ management_ip }}:5000/v3/" \
+    --bootstrap-public-url "http://{{ management_ip }}:5000/v3/" \
+    --bootstrap-region-id RegionOne
+  vars: 
+    management_ip: "{{ management_nip_ip_add.stdout }}"
+  register: bootstrape_result
+  changed_when: "'Success' in bootstrape_result.stdout"
+
+
+- name: configure http server 
+  ansible.builtin.template:
+    src: templates/httpd.conf.j2
+    dest: "{{ http_conf_path }}"
+
+- name: make soft-link
+  ansible.builtin.file:
+    src: /usr/share/keystone/wsgi-keystone.conf
+    dest: /etc/httpd/conf.d/wsgi-keystone.conf
+    state: link
+
+- name: start and enable httpd
+  ansible.builtin.service:
+    name: httpd
+    state: started
+    enabled: yes
+
+- name: add vars in openrc-admin
+  ansible.builtin.set_fact:
+    openrc_complate: "{{
+      openrc_static_vars | combine ({
+        'OS_AUTH_URL': 'http://' + management_nip_ip_add.stdout + ':5000/v3'})
+      }}"
+      
+- name: configure env vars
+  ansible.builtin.template:
+    src: templates/openstack-admin.sh.j2
+    dest: "{{ openrc_path }}"
+
+- name: enable the env vars
+  ansible.builtin.shell: |
+    source /etc/profile.d/openstack-admin.sh 
+
+
+- name: creat example domain
+  openstack.cloud.identity_domain:
+    name: "example"
+    description: "A Example Domain"
+    state: present
+  register: domain_create_result
+
+- name: debug domain create result
+  ansible.builtin.debug:
+    var: domain_create_result
+
+- name: create service project in default domain
+  openstack.cloud.project:
+    name: "service"
+    description: "Service Project"
+    domain: "default"
+    state: present
+    enabled: yes
+
+
+- name: creat project "myproject" in default domain
+  openstack.cloud.project:
+    name: myproject
+    domain: default
+    description: "Demo Project"
+    state: present
+
+- name: create user "myuser" in default domain
+  openstack.cloud.identity_user:
+    name: myuser
+    domain: default
+    password: "{{ myuser_password }}"
+    state: present
+    default_project: myproject
+
+- name: create role myrole
+  openstack.cloud.identity_role:
+    name: myrole
+    state: present
+
+- name: assign role myrole to user myuser in project myproject
+  openstack.cloud.role_assignment:
+    user: myuser
+    project: myproject
+    role: myrole
+    state: present

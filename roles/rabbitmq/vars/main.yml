@@ -1,0 +1,6 @@
+---
+# vars file for roles/rabbitmq
+rabbitmq_packages:
+  - rabbitmq-server
+
+rabbitmq_password: liuziyi212

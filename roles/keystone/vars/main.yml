@@ -1,0 +1,32 @@
+---
+# vars file for roles/keystone
+keystone_packages: 
+  - openstack-keystone
+  - httpd 
+  - python3-mod_wsgi
+
+keystone_hostname: controller
+keystone_conf_path: "/etc/keystone/keystone.conf"
+
+keystone_db_name: keystone
+keystone_db_user: keystone
+keystone_db_password: liuziyi212
+
+mysql_root_password: "@Liuziyi212"
+
+keystone_admin_password: liuziyi212
+
+myuser_password: liuziyi212
+
+http_conf_path: /etc/httpd/conf/httpd.conf
+
+openrc_path: /etc/profile.d/openstack-admin.sh
+
+openrc_static_vars:
+  OS_USERNAME: "admin"
+  OS_PASSWORD: "liuziyi212"
+  OS_PROJECT_NAME: "admin"
+  OS_USER_DOMAIN_NAME: "Default"
+  OS_IDENTITY_API_VERSION: "3"
+  OS_PROJECT_DOMAIN_NAME: "Default"  
+

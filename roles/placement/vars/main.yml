@@ -1,0 +1,17 @@
+---
+# vars file for roles/placement
+placement_db_name: placement
+placement_db_user: placement
+placement_db_user_password: liuziyi212
+placement_openstack_service_password: liuziyi212
+placement_hostname: controller
+placemnet_conf_path: /etc/placement/placement.conf
+placement_packages:
+  - openstack-placement-api
+mysql_root_password: "@Liuziyi212"
+
+placement_api_conf:
+  mysql_hostname: controller
+  placement_db_password: liuziyi212
+  keystone_hostname: controller
+  placement_openstack_service_password: liuziyi212

@@ -1,0 +1,19 @@
+---
+# vars file for roles/glance
+glance_packages:
+  - openstack-glance
+#task vars
+glance_db_name: glance
+glance_db_user: glance
+glance_db_password_task_use: liuziyi212
+glance_password_task_use: liuziyi212
+glance_conf_path: /etc/glance/glance-api.conf
+controller_hostname: controller
+mysql_root_password: "@Liuziyi212"
+ 
+#vars need combine in task
+glance_api_conf:
+  glance_password: liuziyi212
+  keystone_hostname: controller
+  glance_db_password: liuziyi212
+  glance_db_server_hostname: controller

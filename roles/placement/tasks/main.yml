@@ -1,0 +1,114 @@
+---
+# tasks file for roles/placement
+- name: get controller node's first network interface IP
+  ansible.builtin.shell: |
+    ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+  register: management_ip
+
+- name: create db and db user
+  block:
+    - name: create placement's db
+      community.mysql.mysql_db:
+        name: "{{ placement_db_name }}"
+        login_host: "{{ management_ip.stdout }}" 
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: create placement's db_user
+      community.mysql.mysql_user:
+        name: "{{ placement_db_user }}"
+        password: "{{ placement_db_user_password }}"
+        priv: "{{ placement_db_name }}.*:ALL"
+        host: "%"
+        login_host: "{{ management_ip.stdout }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: create placement's db_user
+      community.mysql.mysql_user:
+        name: "{{ placement_db_user }}"
+        password: "{{ placement_db_user_password }}"
+        priv: "{{ placement_db_name }}.*:ALL"
+        host: localhost
+        login_host: "{{ management_ip.stdout }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+- name: create placemnet service and assign placemnet user to admin role
+  block: 
+    - name: create openstack placement service user 
+      openstack.cloud.identity_user:
+        name: placement
+        domain: default
+        password: "{{ placement_openstack_service_password }}"
+        state: present
+
+    - name: assign admin role to placement user in service project
+      openstack.cloud.role_assignment:
+        user: placement
+        project: service
+        role: admin
+        state: present
+
+    - name: create placement service
+      openstack.cloud.catalog_service:
+        name: placement
+        service_type: placement
+        description: "Placement API Service"
+        state: present
+
+- name: create placement api endpoint
+  block: 
+    - name: create placement public endpoint 
+      openstack.cloud.endpoint:
+        service: placement
+        endpoint_interface: public
+        url: "http://{{ management_ip.stdout }}:8778"
+        region: RegionOne
+        state: present
+
+    - name: create placement internal endpoint
+      openstack.cloud.endpoint:
+        service: placement
+        endpoint_interface: internal
+        url: "http://{{ management_ip.stdout }}:8778"
+        region: RegionOne
+        state: present
+
+    - name: create placement admin endpoint
+      openstack.cloud.endpoint:
+        service: placement
+        endpoint_interface: admin
+        url: "http://{{ management_ip.stdout }}:8778"
+        region: RegionOne
+        state: present
+
+- name: install placement packages
+  ansible.builtin.dnf:
+    name: "{{ placement_packages }}"
+    state: latest
+
+- name: deploy placement.conf from template
+  ansible.builtin.template:
+    src: templates/placement.conf.j2 
+    dest: "{{ placemnet_conf_path }}"
+
+- name: fill placement db 
+  ansible.builtin.shell: |
+    su -s /bin/sh -c "placement-manage db sync" placement
+
+- name: deploy httpd ocnfiguration file(00-placement-api.conf)
+  ansible.builtin.copy:
+    src: files/00-placement-api.conf
+    dest: /etc/httpd/conf.d/00-placement-api.conf
+
+- name: restart httpd
+  ansible.builtin.service:
+    name: httpd
+    state: restarted
+    enabled: yes
+
+

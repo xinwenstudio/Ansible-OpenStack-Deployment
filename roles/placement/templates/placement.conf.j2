@@ -1,0 +1,24 @@
+[DEFAULT]
+[api]
+auth_strategy = keystone
+
+[cors]
+[keystone_authtoken]
+auth_url = http://{{ placement_api_conf.keystone_hostname }}:5000/v3
+memcached_servers = {{ placement_api_conf.keystone_hostname }}:11211
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = placement
+password = {{ placement_api_conf.placement_openstack_service_password }}
+
+[oslo_middleware]
+[oslo_policy]
+[placement]
+[placement_database]
+connection = mysql+pymysql://placement:{{ placement_api_conf.placement_db_password }}@{{ placement_api_conf.mysql_hostname }}/placement
+
+[profiler]
+[profiler_jaeger]
+[profiler_otlp]

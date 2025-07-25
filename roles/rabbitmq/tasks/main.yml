@@ -1,0 +1,31 @@
+---
+# tasks file for roles/rabbitmq
+- name: install rabbitmq_packages
+  ansible.builtin.dnf:
+    name: "{{ rabbitmq_packages }}"
+    state: latest
+
+- name: start and enable rabbitmq
+  ansible.builtin.service:
+    name: rabbitmq-server
+    state: started
+    enabled: yes
+
+- name: enable rabbitmq-plugin
+  ansible.builtin.shell: |
+    rabbitmq-plugins enable rabbitmq_management
+
+- name: add openstack user
+  community.rabbitmq.rabbitmq_user:
+    name: openstack
+    password: "{{ rabbitmq_password }}"
+    tags: none
+    state: present
+  
+- name: set full permissions for openstack user
+  community.rabbitmq.rabbitmq_user:
+    name: openstack
+    configure_priv: ".*"
+    read_priv: ".*"
+    write_priv: ".*"
+    vhost: "/"

@@ -1,0 +1,62 @@
+[DEFAULT]
+enabled_backends=fs:file
+
+[barbican]
+[barbican_service_user]
+[cinder]
+[cors]
+[database]
+connection = mysql+pymysql://glance:{{ glance_api_conf.glance_db_password }}@{{ glance_api_conf.glance_db_server_hostname }}/glance
+
+[file]
+[glance.store.http.store]
+[glance.store.rbd.store]
+[glance.store.s3.store]
+[glance.store.swift.store]
+[glance.store.vmware_datastore.store]
+[glance_store]
+default_backend = fs
+
+[healthcheck]
+[image_format]
+[key_manager]
+[keystone_authtoken]
+www_authenticate_uri  = http://{{ glance_api_conf.keystone_hostname }}:5000
+auth_url = http://{{ glance_api_conf.keystone_hostname }}:5000
+memcached_servers = {{ glance_api_conf.keystone_hostname }}:11211
+auth_type = password
+project_domain_name = Default
+user_domain_name = Default
+project_name = service
+username = glance
+password = {{ glance_api_conf.glance_password }}
+
+[os_brick]
+[oslo_concurrency]
+[oslo_limit]
+auth_url = http://{{ glance_api_conf.keystone_hostname }}:5000
+auth_type = password
+user_domain_id = default
+username = glance
+system_scope = all
+password = {{ glance_api_conf.glance_password }}
+endpoint_id = {{ glance_api_conf.endpoint_id }}
+region_name = RegionOne
+
+[oslo_messaging_amqp]
+[oslo_messaging_kafka]
+[oslo_messaging_notifications]
+[oslo_messaging_rabbit]
+[oslo_middleware]
+[oslo_policy]
+[oslo_reports]
+[paste_deploy]
+flavor = keystone
+
+[profiler]
+[task]
+[taskflow_executor]
+[vault]
+[wsgi]
+[fs]
+filesystem_store_datadir = /var/lib/glance/images/
