@@ -1,0 +1,10 @@
+---
+# vars file for roles/common
+package_to_install:
+  - dnf-plugins-core
+  - vim 
+  - git
+  - wget 
+  - centos-release-openstack-dalmatian
+openstack_packages: python3-openstackclient
+

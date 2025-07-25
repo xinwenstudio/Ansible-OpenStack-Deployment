@@ -1,0 +1,8 @@
+---
+# vars file for roles/etcd
+etcd_packages: 
+  - etcd
+
+etcd_conf_path: "/etc/etcd/etcd.conf"
+
+etcd_hostname: controller

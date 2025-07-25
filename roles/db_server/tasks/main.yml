@@ -1,0 +1,68 @@
+---
+# tasks file for roles/db_server
+- name: install mysql-server
+  ansible.builtin.dnf:
+    name: "{{ mysql_packages }}"
+    state: latest
+
+- name: enable and start mysqld
+  ansible.builtin.service:
+    name: mysqld
+    state: started
+    enabled: yes
+
+- name: enable mysql_native_password plugin
+  block:
+    - name: bak mysql-server.cnf file
+      ansible.builtin.command: mv /etc/my.cnf.d/mysql-server.cnf /etc/my.cnf.d/mysql-server.cnf.bak
+      args:
+        removes: /etc/my.cnf.d/mysql-server.cnf  # 确保原文件存在
+        creates: /etc/my.cnf.d/mysql-server.cnf.bak
+
+
+    - name: cp configure file from the back file
+      ansible.builtin.copy:
+        src: /etc/my.cnf.d/mysql-server.cnf.bak
+        dest: /etc/my.cnf.d/mysql-server.cnf
+        remote_src: yes
+
+    - name: enable mysql_native_password
+      ansible.builtin.blockinfile:
+        path: /etc/my.cnf.d/mysql-server.cnf
+        block: |
+          default-authentication-plugin=mysql_native_password
+          bind-address=0.0.0.0
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        insertafter: '^\[mysqld\]'
+      notify: restart_mysqld
+
+- name: configure openstack-mysql-configuration
+  block:
+    - name: get controller node's first network interface IP
+      ansible.builtin.shell: | 
+        ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+      register: first_nic_ip
+
+    - name: configure openstacl-mysql configuration
+      ansible.builtin.template:
+        src: templates/openstack.cnf.j2
+        dest: /etc/my.cnf.d/openstack.cnf
+      vars:
+        management_ip: "{{ first_nic_ip.stdout }}"
+      notify: restart_mysqld
+
+
+
+- name: init mysqld
+  block:
+    - name: copy mysql_init.sh to target host
+      ansible.builtin.copy:
+        src: files/mysql_init.sh
+        dest: /tmp/mysql_init.sh
+        mode: 0755
+    
+    - name: run the mysql_init.sh
+      ansible.builtin.command: |
+        /tmp/mysql_init.sh -p "{{ mysql_root_password }}" 
+      register: init_result
+      changed_when: init_result == 0

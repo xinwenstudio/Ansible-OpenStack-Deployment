@@ -1,0 +1,32 @@
+---
+# tasks file for roles/create_bridge_interface
+- name: Configure bridge using nmcli
+  block:
+    - name: Create bridge connection
+      community.general.nmcli:
+        conn_name: "bridge-{{ bridge_con.bridge_name }}"
+        ifname: "{{ bridge_con.bridge_name }}"
+        type: bridge
+        ip4: "{{ bridge_con.ip_address }}"
+        gw4: "{{ bridge_con.gateway }}"
+        dns4: "{{ bridge_con.dns_servers }}"
+        state: present
+
+    - name: Add physical interface as bridge slave
+      community.general.nmcli:
+        conn_name: "bridge-slave-{{ bridge_con.physical_iface }}"
+        ifname: "{{ bridge_con.physical_iface }}"
+        master: "{{ bridge_con.bridge_name }}"
+        type: bridge-slave
+        state: present
+
+    - name: Bring up bridge connection
+      community.general.nmcli:
+        conn_name: "bridge-{{ bridge_con.bridge_name }}"
+        state: up
+
+    - name: Bring up bridge slave connection
+      community.general.nmcli:
+        conn_name: "bridge-slave-{{ bridge_con.physical_iface }}"
+        state: up
+

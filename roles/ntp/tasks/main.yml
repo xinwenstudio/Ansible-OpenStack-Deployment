@@ -1,0 +1,26 @@
+---
+# tasks file for roles/ntp
+- name: install chrony
+  ansible.builtin.dnf:
+    name: chrony
+    state: latest
+
+- name: change chrony configuration from tempalte
+  ansible.builtin.template:
+    src: templates/chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart_chronyd
+
+- name: enable set_ntp_yes in timedatactl
+  ansible.builtin.command: timedatectl set-ntp yes
+
+- name: check chronyd's ntp server 
+  ansible.builtin.command: |
+    chronyc sources -v | grep '^\^\*'
+  register: chrony_server
+  changed_when: false
+  ignore_errors: yes
+

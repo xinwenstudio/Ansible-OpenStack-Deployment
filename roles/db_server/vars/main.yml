@@ -1,0 +1,7 @@
+---
+# vars file for roles/db_server
+mysql_packages: 
+  - mysql-server
+  - python3-PyMySQL
+
+mysql_root_password: "@Liuziyi212"

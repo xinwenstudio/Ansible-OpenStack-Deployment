@@ -1,0 +1,41 @@
+---
+# tasks file for roles/common
+    #这里要安装一些必要的软件包，安装的都是所有机器必须要安装的软件包，就例如openstack的client端还有一些杂七杂八的东西
+- name: install necessary packages
+  ansible.builtin.dnf:
+    name: "{{ package_to_install }}"
+    state: latest
+
+- name: enable crb repo
+  ansible.builtin.command: |
+    dnf config-manager --set-enabled crb
+
+- name: install openstack packages
+  ansible.builtin.dnf:
+    name: "{{ openstack_packages }}"
+    state: latest
+
+    #这里是关闭防火墙用的，测试环境建议关闭，不然光配置防火墙就好好一段时间
+- name: stop firewall
+  ansible.builtin.service:
+    name: firewalld
+    state: stopped
+    enabled: no
+
+    #这个是关闭selinux的部分，关闭了之后直接关机重启，这样关闭selinux的配置才会永久生效
+- name: disabled selinux
+  block:
+    - name: disable all node's selinux
+      ansible.posix.selinux:
+        state: disabled
+        policy: targeted
+
+    - name: reboot all nodes to apply changes
+      ansible.builtin.reboot:
+        msg: "Reboot to fully disable SELinux"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+      when: selinux_reboot_required | default(true)
+

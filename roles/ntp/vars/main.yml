@@ -1,0 +1,3 @@
+---
+# vars file for roles/ntp
+ntp_server: ntp.aliyun.com

@@ -1,0 +1,8 @@
+---
+# vars file for roles/create_bridge_interface
+bridge_con:
+  bridge_name: "br-ex"
+  physical_iface: "ens192"
+  ip_address: "192.168.77.154/24"
+  gateway: "192.168.77.2"
+  dns_servers: "8.8.8.8"

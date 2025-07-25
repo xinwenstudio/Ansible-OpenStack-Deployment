@@ -1,0 +1,26 @@
+---
+# tasks file for roles/etcd
+- name: install etcd packages
+  ansible.builtin.dnf:
+    name: "{{ etcd_packages }}"
+    state: latest
+
+- name: configure openstack-mysql-configuration
+  block:
+    - name: get controller node's first network interface IP
+      ansible.builtin.shell: |
+        ip -4 -br addr show | grep -v "lo" | awk '{print $3}' | cut -d'/' -f1 | head -n1
+      register: first_nic_ip
+
+- name: configure etcd configuration
+  ansible.builtin.template:
+    src: templates/etcd.conf.j2
+    dest: "{{ etcd_conf_path }}"
+  vars: 
+    mamagement_nic_ip: "{{ first_nic_ip.stdout }}" 
+
+- name: start and enable etcd
+  ansible.builtin.service:
+    name: etcd
+    state: started
+    enabled: yes

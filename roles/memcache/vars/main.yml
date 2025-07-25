@@ -1,0 +1,7 @@
+---
+# vars file for roles/memcache
+memcache_packages: 
+  - memcached 
+  - python3-memcached
+
+memcache_hostname: controller
