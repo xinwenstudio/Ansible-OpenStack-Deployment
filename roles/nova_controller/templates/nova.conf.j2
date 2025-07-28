@@ -84,7 +84,7 @@ password = {{ nova_conf.placement_openstack_service_password }}
 [serial_console]
 [service_user]
 send_service_user_token = true
-auth_url = https://{{ nova_conf.keystone_hostname }}/identity
+auth_url = http://{{ nova_conf.keystone_hostname }}/identity
 auth_strategy = keystone
 auth_type = password
 project_domain_name = Default
